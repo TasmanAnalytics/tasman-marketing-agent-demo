@@ -671,6 +671,55 @@ Note: config/schema.json should be a simple object mapping table → columns (ty
 
 ⸻
 
+📋 Documentation Standards
+
+**Technical Specification Requirement:**
+
+For EVERY version and subversion release, you MUST create a comprehensive technical specification document:
+
+**Location:** `docs/TECHNICAL_SPEC_v{VERSION}.md`
+
+**Required Sections:**
+1. **System Overview** - Purpose, design philosophy, technology stack
+2. **Architecture** - Layer structure, query flow, component diagram
+3. **Core Components** - Detailed documentation of each module with:
+   - Purpose and responsibilities
+   - Key methods and signatures
+   - Configuration options
+   - Safety features and guardrails
+   - Testing coverage
+4. **Agents** - Agent orchestration logic and workflow
+5. **Configuration** - Schema, business context, templates with examples
+6. **Data Layer** - Database structure, relationships, sample data stats
+7. **Testing** - Test suite coverage, commands, fixture details
+8. **API Reference** - Function signatures, parameters, returns, examples
+9. **Performance Characteristics** - Benchmarks, latency, LLM usage stats
+10. **Known Limitations** - Scope boundaries, technical constraints, workarounds
+11. **Future Roadmap** - Planned features for next phases
+12. **Development Workflow** - Common commands, adding templates/roles, debugging
+13. **Appendix** - Dependencies, file manifest, version info
+
+**Version Naming Convention:**
+- Major releases: `TECHNICAL_SPEC_v1.0.0.md`
+- Minor releases: `TECHNICAL_SPEC_v1.1.0.md`
+- Patch releases: `TECHNICAL_SPEC_v1.0.1.md`
+
+**When to Create:**
+- Before marking a version as production-ready
+- After all features for that version are implemented
+- Before creating git tags/releases
+- When major architectural changes occur
+
+**Quality Standards:**
+- Minimum 500 lines of detailed technical content
+- Include code examples for all major components
+- Document all configuration options
+- Provide performance benchmarks
+- List known limitations and workarounds
+- Include complete API reference with examples
+
+⸻
+
 🪜 Suggested Plan of Steps for Claude
 	1.	Scaffold with uv
 	•	uv init + add deps.

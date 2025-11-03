@@ -103,7 +103,8 @@ class SearchAgent:
 
         # Step 3: Execute SQL
         try:
-            df = self.db_connector.execute(sql)
+            # Don't enforce LIMIT - templates already have it
+            df = self.db_connector.execute(sql, enforce_limit=False)
             result['data'] = df
             result['row_count'] = len(df)
             result['steps'].append({

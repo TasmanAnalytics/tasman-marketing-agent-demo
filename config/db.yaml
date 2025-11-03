@@ -1,2 +1,2 @@
-duckdb_path: "./data/marketing.duckdb"
-default_limit: 1000
+duckdb_path: "./data/analytics.duckdb"
+default_limit: 10000

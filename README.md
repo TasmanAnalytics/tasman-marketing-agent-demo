@@ -2,7 +2,7 @@
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](./VERSION)
 [![Python](https://img.shields.io/badge/python-3.11+-green.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-20%20passed-brightgreen.svg)](./tests)
+[![Tests](https://img.shields.io/badge/tests-23%20passed-brightgreen.svg)](./tests)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 A **local-first, notebook-driven** agentic analytics system that minimizes LLM usage through intelligent template matching and rule-based triage.
@@ -100,7 +100,7 @@ make test
 # or: uv run pytest tests/ -v
 ```
 
-All 20 tests should pass ✅
+All 23 tests should pass ✅
 
 ## 🧠 How It Works
 
