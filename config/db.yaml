@@ -1,0 +1,2 @@
+duckdb_path: "./data/marketing.duckdb"
+default_limit: 1000

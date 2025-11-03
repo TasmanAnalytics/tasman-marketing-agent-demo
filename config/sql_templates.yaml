@@ -1,0 +1,127 @@
+- id: spend_by_channel_over_time
+  utterances:
+    - "spend by channel"
+    - "show ad spend per channel over time"
+    - "plot channel spend trend"
+  role_hint: "marketer"
+  sql: |
+    SELECT c.channel,
+           f.date,
+           SUM(f.spend) AS total_spend
+    FROM fact_ad_spend f
+    JOIN dim_campaigns c ON f.campaign_id = c.campaign_id
+    WHERE f.date >= CURRENT_DATE - INTERVAL {{time_window_days}} DAY
+    GROUP BY 1,2
+    ORDER BY 2 ASC, 1
+    LIMIT {{limit}};
+  dims: [channel, date]
+  measures: [spend]
+
+- id: ctr_by_campaign
+  utterances:
+    - "ctr by campaign"
+    - "which campaigns have the best click-through rate"
+  role_hint: "marketer"
+  sql: |
+    SELECT c.campaign_name,
+           SUM(f.impressions) AS impressions,
+           SUM(f.clicks) AS clicks,
+           CASE WHEN SUM(f.impressions)=0 THEN NULL
+                ELSE SUM(f.clicks)::DOUBLE / SUM(f.impressions) END AS ctr
+    FROM fact_ad_spend f
+    JOIN dim_campaigns c ON f.campaign_id = c.campaign_id
+    WHERE f.date >= CURRENT_DATE - INTERVAL {{time_window_days}} DAY
+    GROUP BY 1
+    ORDER BY ctr DESC NULLS LAST
+    LIMIT {{limit}};
+  dims: [campaign_name]
+  measures: [impressions, clicks, ctr]
+
+- id: orders_and_revenue_by_category
+  utterances:
+    - "orders by category"
+    - "revenue by product category"
+  role_hint: "ceo"
+  sql: |
+    SELECT p.category,
+           COUNT(DISTINCT o.order_id) AS orders,
+           SUM(o.revenue) AS revenue,
+           SUM(o.margin)  AS margin
+    FROM fact_orders o
+    JOIN dim_products p ON o.sku = p.sku
+    WHERE o.order_timestamp >= NOW() - INTERVAL {{time_window_days}} DAY
+    GROUP BY 1
+    ORDER BY revenue DESC
+    LIMIT {{limit}};
+  dims: [category]
+  measures: [orders, revenue, margin]
+
+- id: roas_by_channel
+  utterances:
+    - "roas by channel"
+    - "which channel is most efficient"
+  role_hint: "ceo"
+  sql: |
+    WITH spend AS (
+      SELECT c.channel, SUM(f.spend) AS spend
+      FROM fact_ad_spend f
+      JOIN dim_campaigns c ON f.campaign_id = c.campaign_id
+      WHERE f.date >= CURRENT_DATE - INTERVAL {{time_window_days}} DAY
+      GROUP BY 1
+    ),
+    rev AS (
+      SELECT c.channel, SUM(o.revenue) AS revenue
+      FROM fact_orders o
+      JOIN fact_sessions s ON o.session_id = s.session_id
+      JOIN dim_campaigns c ON s.campaign_id = c.campaign_id
+      WHERE o.order_timestamp >= NOW() - INTERVAL {{time_window_days}} DAY
+      GROUP BY 1
+    )
+    SELECT COALESCE(spend.channel, rev.channel) AS channel,
+           spend.spend,
+           rev.revenue,
+           CASE WHEN spend.spend=0 OR spend.spend IS NULL THEN NULL
+                ELSE rev.revenue::DOUBLE / spend.spend END AS roas
+    FROM spend FULL OUTER JOIN rev USING(channel)
+    ORDER BY roas DESC NULLS LAST
+    LIMIT {{limit}};
+  dims: [channel]
+  measures: [spend, revenue, roas]
+
+- id: device_sessions_and_cvr
+  utterances:
+    - "conversion rate by device"
+    - "sessions and cvr by device"
+  role_hint: "marketer"
+  sql: |
+    SELECT s.device,
+           COUNT(*) AS sessions,
+           SUM(CASE WHEN s.converted_flag THEN 1 ELSE 0 END) AS conversions,
+           CASE WHEN COUNT(*)=0 THEN NULL
+                ELSE SUM(CASE WHEN s.converted_flag THEN 1 ELSE 0 END)::DOUBLE / COUNT(*) END AS cvr
+    FROM fact_sessions s
+    WHERE s.date >= CURRENT_DATE - INTERVAL {{time_window_days}} DAY
+    GROUP BY 1
+    ORDER BY cvr DESC NULLS LAST
+    LIMIT {{limit}};
+  dims: [device]
+  measures: [sessions, conversions, cvr]
+
+- id: margin_by_brand
+  utterances:
+    - "margin by brand"
+    - "which brands contribute most margin"
+  role_hint: "cpo"
+  sql: |
+    SELECT p.brand,
+           SUM(o.margin) AS margin,
+           SUM(o.revenue) AS revenue,
+           COUNT(DISTINCT o.order_id) AS orders
+    FROM fact_orders o
+    JOIN dim_products p ON o.sku = p.sku
+    WHERE o.order_timestamp >= NOW() - INTERVAL {{time_window_days}} DAY
+    GROUP BY 1
+    ORDER BY margin DESC
+    LIMIT {{limit}};
+  dims: [brand]
+  measures: [margin, revenue, orders]

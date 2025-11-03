@@ -1,0 +1,69 @@
+{
+  "dim_campaigns": {
+    "campaign_id": "INT",
+    "channel": "TEXT",
+    "campaign_name": "TEXT",
+    "start_date": "DATE",
+    "end_date": "DATE",
+    "objective": "TEXT"
+  },
+  "dim_adgroups": {
+    "adgroup_id": "INT",
+    "campaign_id": "INT",
+    "audience": "TEXT",
+    "placement": "TEXT"
+  },
+  "dim_creatives": {
+    "creative_id": "INT",
+    "adgroup_id": "INT",
+    "format": "TEXT",
+    "asset_url": "TEXT"
+  },
+  "dim_products": {
+    "sku": "TEXT",
+    "category": "TEXT",
+    "subcategory": "TEXT",
+    "price": "FLOAT",
+    "margin": "FLOAT",
+    "brand": "TEXT"
+  },
+  "dim_customers": {
+    "customer_id": "INT",
+    "acquisition_channel": "TEXT",
+    "first_visit_date": "DATE",
+    "region": "TEXT"
+  },
+  "fact_ad_spend": {
+    "date": "DATE",
+    "campaign_id": "INT",
+    "adgroup_id": "INT",
+    "creative_id": "INT",
+    "spend": "FLOAT",
+    "impressions": "INT",
+    "clicks": "INT"
+  },
+  "fact_sessions": {
+    "session_id": "TEXT",
+    "customer_id": "INT",
+    "date": "DATE",
+    "campaign_id": "INT",
+    "adgroup_id": "INT",
+    "creative_id": "INT",
+    "utm_source": "TEXT",
+    "utm_medium": "TEXT",
+    "utm_campaign": "TEXT",
+    "device": "TEXT",
+    "pages_viewed": "INT",
+    "converted_flag": "BOOLEAN"
+  },
+  "fact_orders": {
+    "order_id": "TEXT",
+    "session_id": "TEXT",
+    "customer_id": "INT",
+    "order_timestamp": "TIMESTAMP",
+    "sku": "TEXT",
+    "quantity": "INT",
+    "revenue": "FLOAT",
+    "margin": "FLOAT"
+  }
+}

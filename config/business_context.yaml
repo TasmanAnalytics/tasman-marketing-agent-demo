@@ -1,0 +1,61 @@
+roles:
+  marketer:
+    kpis: [spend, impressions, clicks, ctr, cvr, cac, roas, revenue, margin]
+    dims: [channel, campaign_name, audience, placement, device, region, category, subcategory]
+    synonyms:
+      spend: [ad_spend, cost]
+      impressions: [views]
+      clicks: [taps]
+      ctr: [click_through_rate]
+      cvr: [conversion_rate]
+      revenue: [sales, takings]
+      margin: [profit]
+      channel: [utm_source, source]
+    defaults:
+      time_window_days: 90
+  ceo:
+    kpis: [revenue, margin, growth, cac, ltv, roas]
+    dims: [channel, region, brand, category]
+    synonyms:
+      growth: [trend, run_rate]
+      ltv: [lifetime_value]
+    defaults:
+      time_window_days: 180
+  cpo:
+    kpis: [orders, revenue, margin, attach_rate, conversion_rate]
+    dims: [sku, category, subcategory, brand]
+    synonyms:
+      attach_rate: [attach, bundle_rate]
+      conversion_rate: [cvr]
+    defaults:
+      time_window_days: 120
+  coo:
+    kpis: [orders, fulfillment_rate, cancellations, margin, revenue]
+    dims: [region, category, device]
+    synonyms:
+      cancellations: [refunds, returns]
+    defaults:
+      time_window_days: 120
+
+joins:
+  fact_ad_spend:
+    campaign_id: dim_campaigns.campaign_id
+    adgroup_id: dim_adgroups.adgroup_id
+    creative_id: dim_creatives.creative_id
+  fact_sessions:
+    campaign_id: dim_campaigns.campaign_id
+    adgroup_id: dim_adgroups.adgroup_id
+    creative_id: dim_creatives.creative_id
+    customer_id: dim_customers.customer_id
+  fact_orders:
+    sku: dim_products.sku
+    customer_id: dim_customers.customer_id
+
+calculated_measures:
+  ctr: "CAST(SUM(clicks) AS DOUBLE) / NULLIF(SUM(impressions), 0)"
+  cvr: "CAST(SUM(CASE WHEN converted_flag THEN 1 ELSE 0 END) AS DOUBLE) / NULLIF(COUNT(*), 0)"
+  roas: "CAST(SUM(revenue) AS DOUBLE) / NULLIF(SUM(spend), 0)"
+
+defaults:
+  time_window_days: 90
+  limit: 1000

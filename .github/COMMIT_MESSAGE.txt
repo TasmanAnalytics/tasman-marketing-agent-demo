@@ -1,0 +1,120 @@
+docs: Release v0.1.0 with comprehensive documentation and build automation
+
+Release initial version (0.1.0) of Tasman Agentic Analytics, a local-first
+notebook-driven analytics system. This release includes complete project
+infrastructure, documentation, testing, and developer tooling.
+
+Core features delivered:
+- Local-first architecture with template-based SQL generation
+- Rule-based query triage (search vs analysis classification)
+- 6 pre-built SQL templates for common marketing queries
+- Multi-role support (Marketer, CEO, CPO, COO)
+- Automatic visualization with smart chart type detection
+- LLM fallback support (OpenAI + Anthropic) with filesystem caching
+- Read-only DuckDB connector with safety guardrails
+- 20 comprehensive unit tests (100% passing)
+
+Documentation added:
+- README.md: Complete project documentation with v0.1.0 state section
+- VERSION_0.1_STATE.md: Detailed state document (600+ lines)
+- CHANGELOG.md: Semantic versioning changelog
+- QUICKSTART.md: 5-minute setup guide
+- VERSION: Semantic version number (0.1.0)
+- .github/COMMIT_STYLE_GUIDE.md: Commit message conventions
+
+Build system:
+- Makefile with 10 commands (install, test, run, clean, etc.)
+- Sample data generator (creates 20K+ row database)
+- Complete uv-based dependency management
+- pytest test suite with fixtures
+
+Project structure:
+- 16 Python modules (core, agents, tests, scripts)
+- 11 configuration and documentation files
+- 4 user roles with tailored KPIs
+- 8-table database schema (3 facts, 5 dimensions)
+- Interactive Jupyter notebook with 10 sections
+
+Testing:
+Run the following to verify this release:
+
+1. Verify version number:
+   cat VERSION
+   # Expected: 0.1.0
+
+2. Test Makefile commands:
+   make help
+   # Should show 10 available commands
+
+3. Install and run tests:
+   make install
+   make test
+   # Expected: 20 tests pass in ~0.5 seconds
+
+4. Generate sample database:
+   make sample-data
+   # Expected: Creates ./data/marketing.duckdb with 20K+ rows
+
+5. Verify database schema:
+   ls -lh data/marketing.duckdb
+   # Expected: File exists, ~1-2MB
+
+6. Test notebook launch:
+   make run
+   # Expected: Jupyter launches at http://localhost:8888
+
+7. Verify documentation completeness:
+   cat README.md | grep "Version 0.1.0"
+   # Expected: Version badge and state section present
+
+   cat VERSION_0.1_STATE.md | wc -l
+   # Expected: 600+ lines
+
+   cat CHANGELOG.md | grep "## \[0.1.0\]"
+   # Expected: Release entry found
+
+8. Test cleanup:
+   make clean
+   # Expected: Cache files removed, no errors
+
+9. Validate commit message style guide:
+   cat .github/COMMIT_STYLE_GUIDE.md | grep "## Format"
+   # Expected: Style guide sections present
+
+10. Run comprehensive test suite:
+    make test-v
+    # Expected: All 20 tests pass with verbose output
+
+    make test-cov
+    # Expected: Coverage report shows core modules tested
+
+Validation checklist:
+- [ ] All 20 tests pass
+- [ ] Sample database generates successfully
+- [ ] Makefile commands execute without errors
+- [ ] README.md renders correctly with version badges
+- [ ] VERSION file contains "0.1.0"
+- [ ] CHANGELOG.md includes v0.1.0 entry
+- [ ] Jupyter notebook launches successfully
+- [ ] Documentation is complete and accurate
+
+Production readiness:
+This v0.1.0 release is production-ready for:
+- Search mode analytics queries
+- Template-matched reporting
+- Role-based KPI dashboards
+- Exploratory data analysis
+
+Not yet production-ready for:
+- Analysis mode (planned Phase 2)
+- Web API (planned Phase 2)
+- Multi-user access (planned Phase 3)
+
+For complete feature inventory and production readiness assessment,
+see VERSION_0.1_STATE.md.
+
+References:
+- Implements requirements from claude-prompts/instructions-phase1.md
+- Follows semantic versioning: https://semver.org/
+- Changelog format: https://keepachangelog.com/
+- Establishes v0.1.0 baseline for future development
