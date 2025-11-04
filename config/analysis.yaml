@@ -1,0 +1,297 @@
+# Analysis Configuration for Phase 2 Deep Analytics Agents
+# Controls row caps, sampling strategies, time windows, and statistical parameters
+
+# Row size policies
+row_caps:
+  # Maximum rows for modeling/regression (stratified sampling if exceeded)
+  modelling_max_rows: 250000
+
+  # Maximum rows for segmentation
+  segmentation_max_rows: 200000
+
+  # Maximum rows for cohort analysis
+  cohort_max_rows: 500000
+
+  # Maximum rows for hypothesis testing (usually aggregated, so higher)
+  hypothesis_max_rows: 100000
+
+  # Maximum rows for anomaly detection time series
+  anomaly_max_rows: 10000
+
+# Sampling strategy
+sampling:
+  method: "stratified"  # stratified | random | systematic
+
+  # Stratification dimensions (in priority order)
+  strata_dimensions:
+    - channel
+    - device
+    - region
+
+  # Minimum rows per stratum
+  min_stratum_size: 100
+
+  # Random seed for reproducibility
+  random_seed: 42
+
+# Time windows (days unless specified)
+windows:
+  # Hypothesis testing default window
+  hypothesis_days: 90
+
+  # Driver analysis default window
+  driver_days: 180
+
+  # Segmentation default window
+  segmentation_days: 180
+
+  # Cohort analysis horizon (months)
+  cohort_months: 12
+
+  # Attribution window
+  attribution_days: 90
+
+  # Anomaly detection window
+  anomaly_days: 90
+
+# Statistical parameters
+stats:
+  # Confidence level (95%)
+  confidence_level: 0.95
+
+  # Significance level (alpha)
+  alpha: 0.05
+
+  # False Discovery Rate for multiple testing (Benjamini-Hochberg)
+  fdr_rate: 0.1
+
+  # Minimum sample size for tests
+  min_sample_size: 30
+
+  # Bootstrap iterations for CI estimation
+  bootstrap_iterations: 1000
+
+  # Cross-validation folds
+  cv_folds: 5
+
+  # Power analysis minimum detectable effect (Cohen's d)
+  min_effect_size: 0.2
+
+# Hypothesis testing
+hypothesis:
+  # Test types: auto | z_test | t_test | chi_squared | anova
+  default_test_type: "auto"
+
+  # Tails: two_tailed | one_tailed_greater | one_tailed_less
+  default_tails: "two_tailed"
+
+  # Multiple comparison correction
+  multiple_comparison_correction: true  # Uses Benjamini-Hochberg
+
+  # Minimum group size
+  min_group_size: 30
+
+  # Variance equality threshold (for Welch's t-test decision)
+  levene_alpha: 0.05
+
+# Driver analysis
+driver:
+  # Model types: logistic | linear | lasso | ridge
+  default_model_type: "auto"  # Chooses based on target type
+
+  # Regularization strength (alpha for Lasso/Ridge)
+  regularization_alpha: 1.0
+
+  # Maximum features to include
+  max_features: 50
+
+  # Categorical encoding
+  categorical_encoding:
+    method: "onehot"  # onehot | target | ordinal
+    max_categories: 20  # Top K + "other"
+    min_category_frequency: 0.01  # Minimum 1% frequency
+
+  # Feature importance method: permutation | shap | coefficients
+  importance_method: "permutation"
+
+  # Interaction terms
+  include_interactions: false
+  max_interactions: 10
+
+  # Leakage prevention: features to exclude
+  exclude_patterns:
+    - "*_id"  # IDs leak
+    - "order_*"  # Order-level features leak for session prediction
+    - "revenue"  # Revenue leaks for conversion
+    - "margin"  # Margin leaks for conversion
+
+# Segmentation
+segmentation:
+  # Method: kmeans | rfm | dbscan
+  default_method: "kmeans"
+
+  # K-means parameters
+  kmeans:
+    min_k: 2
+    max_k: 10
+    k_selection_method: "silhouette"  # silhouette | elbow | gap_statistic
+    n_init: 10
+    max_iter: 300
+
+  # RFM parameters (quantiles)
+  rfm:
+    recency_bins: 5
+    frequency_bins: 5
+    monetary_bins: 5
+
+  # DBSCAN parameters (for anomaly detection)
+  dbscan:
+    eps: 0.5
+    min_samples: 10
+
+  # Feature standardization
+  standardize: true
+
+  # Outlier handling: winsorize | clip | remove
+  outlier_handling: "winsorize"
+  winsorize_limits: [0.01, 0.99]  # 1st and 99th percentiles
+
+  # Segment stability (bootstrap)
+  stability_iterations: 100
+  stability_threshold: 0.7  # Minimum Adjusted Rand Index
+
+# Cohort analysis
+cohort:
+  # Cohort key: month | week | quarter
+  default_cohort_period: "month"
+
+  # Metrics to track
+  metrics:
+    - retention_rate
+    - repeat_purchase_rate
+    - orders_per_customer
+    - revenue_per_customer
+    - margin_per_customer
+
+  # Retention definition: active_orders | any_activity
+  retention_definition: "active_orders"
+
+  # Minimum cohort size
+  min_cohort_size: 100
+
+  # Comparison baseline (e.g., first N cohorts)
+  baseline_cohorts: 3
+
+# Attribution & ROAS
+attribution:
+  # Attribution model: last_touch | first_touch | equal_split | time_decay
+  default_model: "last_touch"
+
+  # Time decay half-life (days) for time_decay model
+  time_decay_halflife: 7
+
+  # ROAS variance decomposition
+  variance_decomposition: true
+
+  # Sensitivity analysis windows (days)
+  sensitivity_windows: [60, 90, 120, 180]
+
+  # Outlier handling for ROAS
+  roas_winsorize_limits: [0.05, 0.95]  # 5th to 95th percentile
+
+  # Minimum spend threshold for inclusion
+  min_spend_threshold: 100
+
+# Anomaly & Trend Break Detection
+anomaly:
+  # Anomaly detection method: zscore | iqr | stl_residuals
+  detection_method: "stl_residuals"
+
+  # Z-score threshold
+  zscore_threshold: 3.0
+
+  # IQR multiplier
+  iqr_multiplier: 1.5
+
+  # STL decomposition parameters
+  stl:
+    seasonal_period: 7  # Weekly seasonality
+    robust: true
+
+  # Change-point detection algorithm: pelt | binary_segmentation
+  changepoint_algorithm: "pelt"
+
+  # Change-point penalty (higher = fewer breaks)
+  changepoint_penalty: 10
+
+  # Minimum segment length (days)
+  min_segment_length: 7
+
+  # Confirmation test for breaks
+  confirmation_test: true  # Run t-test pre/post
+  confirmation_alpha: 0.05
+
+  # Maximum anomalies to report
+  max_anomalies: 20
+
+# Reporting
+reporting:
+  # Decimal precision
+  precision: 3
+
+  # P-value formatting: scientific | decimal
+  pvalue_format: "decimal"
+
+  # Effect size reporting
+  include_effect_sizes: true
+
+  # Confidence intervals in output
+  include_confidence_intervals: true
+
+  # Diagnostics level: minimal | standard | verbose
+  diagnostics_level: "standard"
+
+  # Chart generation
+  generate_charts: true
+  chart_dpi: 300
+  chart_format: "png"  # png | pdf | svg
+
+  # Chart output directory
+  chart_output_dir: "./notebooks/outputs/analysis"
+
+# Reproducibility
+reproducibility:
+  # Always set random seed
+  enforce_seed: true
+
+  # Default random seed
+  default_seed: 42
+
+  # Save analysis plans as JSON
+  save_plans: true
+  plan_output_dir: "./notebooks/outputs/plans"
+
+  # Version analysis outputs
+  version_outputs: true
+
+# Performance
+performance:
+  # Parallel processing
+  n_jobs: -1  # Use all CPUs (-1) or specify number
+
+  # Memory limits (MB)
+  max_memory_mb: 4096
+
+  # Query timeout (seconds)
+  query_timeout: 300
+
+  # Progress reporting
+  show_progress: true
+
+# Defaults (fallbacks)
+defaults:
+  time_window_days: 90
+  max_rows: 250000
+  confidence_level: 0.95
+  alpha: 0.05
+  random_seed: 42
