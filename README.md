@@ -1,23 +1,31 @@
 # Tasman Agentic Analytics
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](./VERSION)
 [![Python](https://img.shields.io/badge/python-3.11+-green.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-23%20passed-brightgreen.svg)](./tests)
+[![Tests](https://img.shields.io/badge/tests-141%20passed-brightgreen.svg)](./tests)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-A **local-first, notebook-driven** agentic analytics system that minimizes LLM usage through intelligent template matching and rule-based triage.
+A **local-first, notebook-driven** agentic analytics system that combines template-based search with sophisticated statistical analysis agents.
 
-> **Version 0.1.0** - Initial release with search mode, template library, and multi-role support.
+> **Version 0.2.0** - Major update adding Analysis Mode with 3 specialized agents: Hypothesis Testing, Driver Analysis, and Segmentation.
 
 ## 🎯 Key Features
 
+### Search Mode (v0.1)
 - **Local-first architecture**: Template matching and rule-based logic before any LLM calls
 - **Minimal LLM usage**: Only calls LLM when local logic fails; aggressive filesystem caching
 - **Config-driven**: Schema, business context, and SQL templates in YAML/JSON
 - **Multi-role support**: Marketer, CEO, CPO, COO roles with tailored KPIs and dimensions
 - **Automatic visualization**: Smart chart generation based on data characteristics
 - **Read-only safety**: SQL execution with guardrails and LIMIT enforcement
-- **Full observability**: Track every step from triage → SQL → execution → visualization
+
+### Analysis Mode (v0.2 - NEW!)
+- **Hypothesis Testing**: A/B tests, t-tests, chi-squared, ANOVA with FDR correction
+- **Driver Analysis**: Logistic/linear regression, feature importance, cross-validation
+- **Segmentation**: K-means, RFM, DBSCAN clustering with auto k-selection
+- **Statistical rigor**: Bootstrapping, effect sizes, confidence intervals
+- **Stratified sampling**: Automatic sampling for large datasets
+- **Natural language plans**: Parse questions into statistical analysis plans
 
 ## 📂 Project Structure
 
@@ -29,20 +37,26 @@ tasman-marketing-agent/
 │   ├── schema.json                     # Database schema definition
 │   ├── db.yaml                         # Database connection config
 │   ├── business_context.yaml           # Roles, KPIs, synonyms
-│   └── sql_templates.yaml              # Canonical query templates
+│   ├── sql_templates.yaml              # Canonical query templates
+│   └── analysis.yaml                   # Analysis agent configuration (NEW!)
 ├── core/
 │   ├── duckdb_connector.py             # Read-only DB connector
 │   ├── local_text_to_sql.py            # Template-based SQL generation
 │   ├── triage_local.py                 # Rule-based query triage
 │   ├── llm_clients.py                  # OpenAI/Anthropic clients + caching
+│   ├── analysis_utils.py               # Statistical utilities (NEW!)
 │   └── viz.py                          # Auto-visualization
 ├── agents/
 │   ├── agent_triage.py                 # Triage orchestration
 │   ├── agent_text_to_sql.py            # SQL generation orchestration
-│   └── agent_search.py                 # End-to-end search agent
-├── tests/                              # pytest test suite
+│   ├── agent_search.py                 # End-to-end search agent
+│   ├── base_analysis_agent.py          # Base class for analysis agents (NEW!)
+│   ├── agent_hypothesis.py             # Hypothesis testing agent (NEW!)
+│   ├── agent_driver.py                 # Driver analysis agent (NEW!)
+│   └── agent_segmentation.py           # Segmentation agent (NEW!)
+├── tests/                              # pytest test suite (141 tests)
 ├── data/                               # DuckDB database location
-└── .env                                # Environment variables (create from .env.example)
+└── .env                                # Environment variables
 ```
 
 ## 🚀 Quick Start
@@ -100,7 +114,159 @@ make test
 # or: uv run pytest tests/ -v
 ```
 
-All 23 tests should pass ✅
+All 141 tests should pass ✅
+
+## 🏗️ Architecture
+
+### System Overview
+
+```mermaid
+graph TB
+    User[User Question] --> Triage[Triage Agent]
+
+    Triage -->|search| Search[Search Agent]
+    Triage -->|analysis| Analysis[Analysis Mode]
+
+    Search --> TextToSQL[Text-to-SQL Agent]
+    TextToSQL --> Exec[Execute SQL]
+    Exec --> Viz[Visualize]
+    Viz --> Result[Results]
+
+    Analysis --> HypothesisAgent[Hypothesis Testing Agent]
+    Analysis --> DriverAgent[Driver Analysis Agent]
+    Analysis --> SegmentationAgent[Segmentation Agent]
+
+    HypothesisAgent --> AnalysisResult[Analysis Results]
+    DriverAgent --> AnalysisResult
+    SegmentationAgent --> AnalysisResult
+
+    style Triage fill:#4A90E2
+    style Search fill:#7ED321
+    style Analysis fill:#F5A623
+    style HypothesisAgent fill:#BD10E0
+    style DriverAgent fill:#BD10E0
+    style SegmentationAgent fill:#BD10E0
+```
+
+### Analysis Agent Architecture
+
+```mermaid
+graph TB
+    subgraph "Base Analysis Agent"
+        BaseAgent[BaseAnalysisAgent<br/>plan → pull → run → report]
+    end
+
+    subgraph "Specialized Agents"
+        Hypothesis[HypothesisTestingAgent<br/>- Proportion tests<br/>- t-tests<br/>- Chi-squared<br/>- ANOVA]
+        Driver[DriverAnalysisAgent<br/>- Logistic regression<br/>- Linear regression<br/>- Feature importance<br/>- Cross-validation]
+        Segmentation[SegmentationAgent<br/>- K-means clustering<br/>- RFM segmentation<br/>- DBSCAN outliers<br/>- Silhouette scoring]
+    end
+
+    subgraph "Core Utilities"
+        Utils[analysis_utils.py<br/>- Stratified sampling<br/>- Categorical encoding<br/>- Statistical tests<br/>- Preprocessing]
+    end
+
+    BaseAgent --> Hypothesis
+    BaseAgent --> Driver
+    BaseAgent --> Segmentation
+
+    Hypothesis --> Utils
+    Driver --> Utils
+    Segmentation --> Utils
+
+    style BaseAgent fill:#4A90E2
+    style Hypothesis fill:#BD10E0
+    style Driver fill:#BD10E0
+    style Segmentation fill:#BD10E0
+    style Utils fill:#50E3C2
+```
+
+### Analysis Workflow (Plan → Pull → Run → Report)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Agent as Analysis Agent
+    participant DB as DuckDB
+    participant Stats as Statistical Engine
+
+    User->>Agent: Natural language question
+
+    rect rgb(74, 144, 226)
+        Note over Agent: 1. PLAN
+        Agent->>Agent: Parse question
+        Agent->>Agent: Extract parameters
+        Agent->>Agent: Generate SQL template
+        Agent->>Agent: Validate plan
+    end
+
+    rect rgb(80, 227, 194)
+        Note over Agent,DB: 2. PULL
+        Agent->>DB: Execute SQL query
+        DB-->>Agent: Raw data
+        Agent->>Agent: Stratified sampling (if needed)
+        Agent->>Agent: Apply row caps
+    end
+
+    rect rgb(189, 16, 224)
+        Note over Agent,Stats: 3. RUN
+        Agent->>Stats: Hypothesis test / Regression / Clustering
+        Stats->>Stats: Compute statistics
+        Stats->>Stats: Generate diagnostics
+        Stats-->>Agent: Results with metrics
+    end
+
+    rect rgb(245, 166, 35)
+        Note over Agent: 4. REPORT
+        Agent->>Agent: Generate insights
+        Agent->>Agent: Flag caveats
+        Agent->>Agent: Suggest next actions
+        Agent-->>User: Analysis report
+    end
+```
+
+### Statistical Methods by Agent
+
+```mermaid
+mindmap
+  root((Analysis<br/>Agents))
+    HypothesisTestingAgent
+      Proportion Tests
+        Two-sample z-test
+        Chi-squared test
+      Continuous Tests
+        Welch's t-test
+        ANOVA
+      Corrections
+        Benjamini-Hochberg FDR
+        Bonferroni
+    DriverAnalysisAgent
+      Binary Outcomes
+        Logistic Regression
+        Lasso regularization
+        ROC AUC scoring
+      Continuous Outcomes
+        Linear Regression
+        Ridge regularization
+        R² scoring
+      Feature Analysis
+        Permutation importance
+        Cross-validation
+        One-hot encoding
+    SegmentationAgent
+      K-means
+        Auto k-selection
+        Silhouette scoring
+        Standardization
+      RFM
+        Quintile scoring
+        Customer profiling
+        Revenue-based ranking
+      DBSCAN
+        Density clustering
+        Outlier detection
+        Eps tuning
+```
 
 ## 🧠 How It Works
 
@@ -134,9 +300,13 @@ The system **minimizes LLM calls** through:
 
 ## 📊 Example Usage
 
-### From the Notebook
+### Search Mode (v0.1)
 
 ```python
+from agents.agent_search import SearchAgent
+
+search_agent = SearchAgent(db_connector, config)
+
 # Template-matched query (no LLM)
 result = search_agent.search(
     question="show ad spend per channel over time",
@@ -153,6 +323,40 @@ result = search_agent.search(
 result = search_agent.search(
     question="conversion rate by device"
 )
+```
+
+### Analysis Mode (v0.2 - NEW!)
+
+```python
+from agents.agent_hypothesis import HypothesisTestingAgent
+from agents.agent_driver import DriverAnalysisAgent
+from agents.agent_segmentation import SegmentationAgent
+
+# Initialize agents
+hypothesis_agent = HypothesisTestingAgent(db_connector, config)
+driver_agent = DriverAnalysisAgent(db_connector, config)
+segmentation_agent = SegmentationAgent(db_connector, config)
+
+# Hypothesis Testing: Compare conversion rates
+result = hypothesis_agent.execute(
+    question="Is conversion rate different between mobile and desktop?",
+    role="analyst"
+)
+# Returns: test statistic, p-value, effect size, confidence intervals, insights
+
+# Driver Analysis: Find what drives revenue
+result = driver_agent.execute(
+    question="What are the key drivers of revenue?",
+    role="analyst"
+)
+# Returns: feature importance, coefficients, model metrics, cross-validation scores
+
+# Segmentation: Create customer segments
+result = segmentation_agent.execute(
+    question="Segment customers by value",
+    role="analyst"
+)
+# Returns: k segments, silhouette score, segment profiles, sizes, characteristics
 ```
 
 ### Sample Output
@@ -289,11 +493,11 @@ ANTHROPIC_MODEL=claude-3-5-haiku-20241022
 - **Sharable**: Mix code, results, and narrative
 - **Production-ready**: Core logic can be extracted to scripts
 
-## 📦 Version 0.1.0 - Current State
+## 📦 Version 0.2.0 - Current State
 
 ### ✅ What's Included
 
-**Core Features:**
+**Search Mode (v0.1):**
 - ✅ Local-first architecture with template matching
 - ✅ Rule-based triage (search vs analysis)
 - ✅ 6 pre-built SQL templates
@@ -303,28 +507,41 @@ ANTHROPIC_MODEL=claude-3-5-haiku-20241022
 - ✅ Filesystem caching
 - ✅ Read-only database safety
 
+**Analysis Mode (v0.2 - NEW!):**
+- ✅ **Hypothesis Testing Agent** - A/B tests, t-tests, chi-squared, ANOVA, FDR correction
+- ✅ **Driver Analysis Agent** - Logistic/linear regression, feature importance, cross-validation
+- ✅ **Segmentation Agent** - K-means, RFM, DBSCAN clustering with auto k-selection
+- ✅ **Base Analysis Agent** - Shared plan→pull→run→report workflow
+- ✅ **Statistical Utilities** - Stratified sampling, categorical encoding, 20+ statistical functions
+- ✅ **Natural Language Parsing** - Extract parameters from questions
+- ✅ **SQL Template Generation** - Dynamic query building for analysis
+
 **Testing & Quality:**
-- ✅ 20 unit tests (100% passing)
+- ✅ 141 unit tests (100% passing)
+- ✅ Comprehensive test coverage for all agents
+- ✅ Synthetic data generators for testing
+- ✅ Edge case and integration tests
 - ✅ pytest fixtures and mocks
-- ✅ Sample data generator
-- ✅ Comprehensive documentation
 
 **Developer Experience:**
 - ✅ Makefile for common tasks
 - ✅ Interactive Jupyter notebook
 - ✅ Environment configuration
-- ✅ Quick start guide
+- ✅ Detailed architecture documentation
+- ✅ Mermaid diagrams
 
 ### ⏳ What's Not Included (Yet)
 
-**Planned for Phase 2+:**
-- ⏳ Analysis mode (driver analysis, segmentation, hypothesis testing)
+**Planned for v0.3+:**
+- ⏳ Cohort & Retention Analysis Agent
+- ⏳ Attribution & ROAS Agent
+- ⏳ Anomaly & Trend Break Detection Agent
+- ⏳ Analysis Plan Builder (meta-agent)
 - ⏳ Multi-query decomposition
 - ⏳ Web UI (Flask/FastAPI)
 - ⏳ Observability dashboard
 - ⏳ Streaming results
 - ⏳ Natural language chart annotations
-- ⏳ Redis/database-backed cache
 
 ### 🎯 Production Readiness
 
@@ -333,45 +550,75 @@ ANTHROPIC_MODEL=claude-3-5-haiku-20241022
 - Template-matched analytics
 - Role-based KPI access
 - SQL execution safety
+- Hypothesis testing (with proper validation)
+- Driver analysis (with cross-validation)
+- Customer segmentation (with quality metrics)
 
 **Use with caution:**
 - Novel queries (requires LLM configuration)
-- Large result sets (manual LIMIT recommended)
+- Large result sets (automatic sampling applied)
 - Concurrent users (notebook is single-user)
+- Analysis on small samples (< 100 rows)
 
 **Not production-ready:**
-- Analysis mode (not implemented)
+- Remaining analysis agents (cohort, attribution, anomaly)
 - Web API (use notebook for now)
 - Multi-user access (no authentication)
 
 ## 📈 Roadmap
 
-### Phase 2 (Planned)
+### ✅ Phase 1 (v0.1.0) - COMPLETE
+- ✅ Local-first search mode
+- ✅ Template-based SQL generation
+- ✅ Multi-role support
+- ✅ Auto-visualization
+- ✅ LLM fallback with caching
 
-- [ ] Analysis mode (hypothesis testing, driver analysis, segmentation)
+### ✅ Phase 2 (v0.2.0) - COMPLETE
+- ✅ Hypothesis Testing Agent
+- ✅ Driver Analysis Agent
+- ✅ Segmentation Agent
+- ✅ Base analysis agent infrastructure
+- ✅ Statistical utilities library
+- ✅ Natural language parsing
+- ✅ 141 comprehensive tests
+
+### 🚧 Phase 3 (v0.3.0) - IN PROGRESS
+- [ ] Cohort & Retention Analysis Agent
+- [ ] Attribution & ROAS Agent
+- [ ] Anomaly & Trend Break Detection Agent
+- [ ] Analysis Plan Builder (meta-agent)
+- [ ] Notebook demos for all analysis agents
+- [ ] Complete user documentation
+
+### 🔮 Future Phases
 - [ ] Multi-query workflows (decompose complex questions)
 - [ ] Observability dashboard (token usage, cache hits, latency)
 - [ ] Web UI (Flask/FastAPI frontend)
 - [ ] Streaming results (for large datasets)
 - [ ] Natural language chart annotations
-
-### Future Considerations
-
 - [ ] Authentication & authorization
 - [ ] Multi-user support
 - [ ] Query history & favorites
 - [ ] Scheduled queries
 - [ ] Alert system
-- [ ] Export to various formats
 
 ## 🤝 Contributing
 
-This is Phase 1 (proof-of-concept). To extend:
+This project is actively developed. To extend:
 
+**Search Mode:**
 1. Add more templates to `config/sql_templates.yaml`
 2. Add more roles to `config/business_context.yaml`
 3. Extend `LocalTriage` with more sophisticated rules
 4. Add more chart types to `core/viz.py`
+
+**Analysis Mode:**
+1. Create new analysis agents by extending `BaseAnalysisAgent`
+2. Add statistical methods to `core/analysis_utils.py`
+3. Configure agent parameters in `config/analysis.yaml`
+4. Write comprehensive tests with synthetic data generators
+5. Follow the plan→pull→run→report workflow pattern
 
 ## 📄 License
 
