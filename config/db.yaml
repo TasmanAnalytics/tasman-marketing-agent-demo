@@ -1,2 +1,4 @@
-duckdb_path: "./data/analytics.duckdb"
+# Database Configuration
+# You can override the duckdb_path using the DUCKDB_PATH environment variable
+duckdb_path: "./data/synthetic_data.duckdb"
 default_limit: 10000
