@@ -1,0 +1,273 @@
+# Semantic Layer for Marketing Analytics
+# Clean-room implementation for Compass demo
+# Defines dimensions, entities, base queries, and derived metrics
+
+version: "1.0.0"
+
+# Default parameters for queries
+defaults:
+  window_days: 90
+  limit: 1000
+
+# Dimensions - canonical names mapped to fully-qualified sources
+dimensions:
+  channel:
+    source: dim_campaigns.channel
+    description: "Marketing channel (e.g., search, social, referral, display)"
+    entity: campaign
+
+  campaign_name:
+    source: dim_campaigns.campaign_name
+    description: "Campaign identifier"
+    entity: campaign
+
+  device:
+    source: fact_sessions.device_type
+    description: "Device type (desktop, mobile, tablet)"
+    entity: session
+
+  region:
+    source: dim_customers.region
+    description: "Geographic region"
+    entity: customer
+
+# Entities - primary keys for join relationships
+entities:
+  campaign:
+    primary_key: dim_campaigns.campaign_id
+    description: "Campaign entity"
+
+  adgroup:
+    primary_key: dim_adgroups.adgroup_id
+    description: "Ad group entity"
+
+  creative:
+    primary_key: dim_creatives.creative_id
+    description: "Creative entity"
+
+  customer:
+    primary_key: dim_customers.customer_id
+    description: "Customer entity"
+
+  session:
+    primary_key: fact_sessions.session_id
+    description: "Session entity"
+
+  order:
+    primary_key: fact_orders.order_id
+    description: "Order entity"
+
+# Base queries - safe, tested building blocks
+# Each base query is self-contained and produces a single semantic concept
+base_queries:
+
+  spend_by_channel:
+    description: "Total ad spend by channel"
+    sql: |
+      SELECT
+        c.channel,
+        SUM(s.spend) as spend,
+        COUNT(DISTINCT s.date) as days_active
+      FROM fact_ad_spend s
+      INNER JOIN dim_campaigns c ON s.campaign_id = c.campaign_id
+      WHERE s.date >= CURRENT_DATE - INTERVAL '{{window_days}}' DAY
+      GROUP BY c.channel
+      ORDER BY spend DESC
+      LIMIT {{limit}}
+    outputs:
+      - channel
+      - spend
+      - days_active
+
+  impressions_clicks_by_channel:
+    description: "Impressions and clicks by channel"
+    sql: |
+      SELECT
+        c.channel,
+        SUM(s.impressions) as impressions,
+        SUM(s.clicks) as clicks,
+        CASE
+          WHEN SUM(s.impressions) > 0
+          THEN SUM(s.clicks)::FLOAT / NULLIF(SUM(s.impressions), 0)
+          ELSE 0
+        END as ctr
+      FROM fact_ad_spend s
+      INNER JOIN dim_campaigns c ON s.campaign_id = c.campaign_id
+      WHERE s.date >= CURRENT_DATE - INTERVAL '{{window_days}}' DAY
+      GROUP BY c.channel
+      ORDER BY impressions DESC
+      LIMIT {{limit}}
+    outputs:
+      - channel
+      - impressions
+      - clicks
+      - ctr
+
+  conversions_by_channel:
+    description: "Conversions by channel (from sessions)"
+    sql: |
+      SELECT
+        c.channel,
+        COUNT(*) as sessions,
+        SUM(CASE WHEN s.converted_flag THEN 1 ELSE 0 END) as conversions,
+        CASE
+          WHEN COUNT(*) > 0
+          THEN SUM(CASE WHEN s.converted_flag THEN 1 ELSE 0 END)::FLOAT / NULLIF(COUNT(*), 0)
+          ELSE 0
+        END as cvr
+      FROM fact_sessions s
+      INNER JOIN dim_campaigns c ON s.campaign_id = c.campaign_id
+      WHERE s.session_start >= CURRENT_DATE - INTERVAL '{{window_days}}' DAY
+      GROUP BY c.channel
+      ORDER BY conversions DESC
+      LIMIT {{limit}}
+    outputs:
+      - channel
+      - sessions
+      - conversions
+      - cvr
+
+  revenue_by_channel:
+    description: "Revenue by channel using last-touch attribution (fact_orders -> fact_sessions -> dim_campaigns)"
+    sql: |
+      SELECT
+        c.channel,
+        COUNT(DISTINCT o.order_id) as orders,
+        SUM(o.revenue) as revenue
+      FROM fact_orders o
+      INNER JOIN fact_sessions s ON o.session_id = s.session_id
+      INNER JOIN dim_campaigns c ON s.campaign_id = c.campaign_id
+      WHERE o.order_timestamp >= CURRENT_DATE - INTERVAL '{{window_days}}' DAY
+      GROUP BY c.channel
+      ORDER BY revenue DESC
+      LIMIT {{limit}}
+    outputs:
+      - channel
+      - orders
+      - revenue
+
+# Derived metrics - compositions of base queries
+# These are the high-level business metrics built from safe base queries
+derived_metrics:
+
+  roas_by_channel:
+    description: "Return on ad spend by channel (revenue / spend)"
+    base_queries:
+      - spend_by_channel
+      - revenue_by_channel
+    sql: |
+      WITH spend AS (
+        SELECT
+          c.channel,
+          SUM(s.spend) as spend
+        FROM fact_ad_spend s
+        INNER JOIN dim_campaigns c ON s.campaign_id = c.campaign_id
+        WHERE s.date >= CURRENT_DATE - INTERVAL '{{window_days}}' DAY
+        GROUP BY c.channel
+      ),
+      revenue AS (
+        SELECT
+          c.channel,
+          SUM(o.revenue) as revenue
+        FROM fact_orders o
+        INNER JOIN fact_sessions s ON o.session_id = s.session_id
+        INNER JOIN dim_campaigns c ON s.campaign_id = c.campaign_id
+        WHERE o.order_timestamp >= CURRENT_DATE - INTERVAL '{{window_days}}' DAY
+        GROUP BY c.channel
+      )
+      SELECT
+        COALESCE(sp.channel, r.channel) as channel,
+        COALESCE(sp.spend, 0) as spend,
+        COALESCE(r.revenue, 0) as revenue,
+        CASE
+          WHEN COALESCE(sp.spend, 0) > 0
+          THEN COALESCE(r.revenue, 0)::FLOAT / NULLIF(sp.spend, 0)
+          ELSE 0
+        END as roas
+      FROM spend sp
+      FULL OUTER JOIN revenue r ON sp.channel = r.channel
+      WHERE COALESCE(sp.spend, 0) > 0 OR COALESCE(r.revenue, 0) > 0
+      ORDER BY roas DESC
+      LIMIT {{limit}}
+    outputs:
+      - channel
+      - spend
+      - revenue
+      - roas
+
+  cac_by_channel:
+    description: "Customer acquisition cost by channel (spend / conversions)"
+    base_queries:
+      - spend_by_channel
+      - conversions_by_channel
+    sql: |
+      WITH spend AS (
+        SELECT
+          c.channel,
+          SUM(s.spend) as spend
+        FROM fact_ad_spend s
+        INNER JOIN dim_campaigns c ON s.campaign_id = c.campaign_id
+        WHERE s.date >= CURRENT_DATE - INTERVAL '{{window_days}}' DAY
+        GROUP BY c.channel
+      ),
+      conversions AS (
+        SELECT
+          c.channel,
+          SUM(CASE WHEN s.converted_flag THEN 1 ELSE 0 END) as conversions
+        FROM fact_sessions s
+        INNER JOIN dim_campaigns c ON s.campaign_id = c.campaign_id
+        WHERE s.session_start >= CURRENT_DATE - INTERVAL '{{window_days}}' DAY
+        GROUP BY c.channel
+      )
+      SELECT
+        COALESCE(sp.channel, cv.channel) as channel,
+        COALESCE(sp.spend, 0) as spend,
+        COALESCE(cv.conversions, 0) as conversions,
+        CASE
+          WHEN COALESCE(cv.conversions, 0) > 0
+          THEN COALESCE(sp.spend, 0)::FLOAT / NULLIF(cv.conversions, 0)
+          ELSE NULL
+        END as cac
+      FROM spend sp
+      FULL OUTER JOIN conversions cv ON sp.channel = cv.channel
+      WHERE COALESCE(sp.spend, 0) > 0 OR COALESCE(cv.conversions, 0) > 0
+      ORDER BY cac ASC
+      LIMIT {{limit}}
+    outputs:
+      - channel
+      - spend
+      - conversions
+      - cac
+
+# Metric definitions - canonical formulas
+# These are the authoritative definitions used throughout the system
+metric_definitions:
+  spend: "SUM(fact_ad_spend.spend)"
+  impressions: "SUM(fact_ad_spend.impressions)"
+  clicks: "SUM(fact_ad_spend.clicks)"
+  ctr: "clicks / NULLIF(impressions, 0)"
+  sessions: "COUNT(*) FROM fact_sessions"
+  conversions: "SUM(CASE WHEN converted_flag THEN 1 ELSE 0 END)"
+  cvr: "conversions / NULLIF(sessions, 0)"
+  orders: "COUNT(DISTINCT fact_orders.order_id)"
+  revenue: "SUM(fact_orders.revenue)"
+  roas: "revenue / NULLIF(spend, 0)"
+  cac: "spend / NULLIF(conversions, 0)"
+
+# Join rules - canonical join paths to prevent ambiguity
+join_rules:
+  revenue_attribution:
+    description: "Revenue must be attributed via last-touch: fact_orders -> fact_sessions -> dim_campaigns"
+    path:
+      - "fact_orders.session_id = fact_sessions.session_id"
+      - "fact_sessions.campaign_id = dim_campaigns.campaign_id"
+
+  spend_to_campaign:
+    description: "Spend joins directly to campaigns"
+    path:
+      - "fact_ad_spend.campaign_id = dim_campaigns.campaign_id"
+
+  session_to_campaign:
+    description: "Sessions join directly to campaigns"
+    path:
+      - "fact_sessions.campaign_id = dim_campaigns.campaign_id"
