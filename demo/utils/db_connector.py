@@ -46,10 +46,10 @@ def validate_schema(conn: duckdb.DuckDBPyConnection) -> Dict[str, Any]:
         'dim_campaigns': ['campaign_id', 'campaign_name', 'channel'],
         'dim_adgroups': ['adgroup_id', 'campaign_id'],
         'dim_creatives': ['creative_id', 'adgroup_id'],
-        'dim_products': ['product_id'],
+        'dim_products': ['sku'],  # Actual schema uses 'sku' not 'product_id'
         'dim_customers': ['customer_id', 'region'],
         'fact_ad_spend': ['date', 'campaign_id', 'spend', 'impressions', 'clicks'],
-        'fact_sessions': ['session_id', 'campaign_id', 'session_start', 'converted_flag', 'device_type'],
+        'fact_sessions': ['session_id', 'campaign_id', 'session_start_time', 'converted_flag', 'device_type'],  # Uses 'session_start_time'
         'fact_orders': ['order_id', 'session_id', 'order_timestamp', 'revenue'],
     }
 

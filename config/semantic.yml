@@ -117,7 +117,7 @@ base_queries:
         END as cvr
       FROM fact_sessions s
       INNER JOIN dim_campaigns c ON s.campaign_id = c.campaign_id
-      WHERE s.session_start >= CURRENT_DATE - INTERVAL '{{window_days}}' DAY
+      WHERE s.session_start_time >= CURRENT_DATE - INTERVAL '{{window_days}}' DAY
       GROUP BY c.channel
       ORDER BY conversions DESC
       LIMIT {{limit}}
@@ -216,7 +216,7 @@ derived_metrics:
           SUM(CASE WHEN s.converted_flag THEN 1 ELSE 0 END) as conversions
         FROM fact_sessions s
         INNER JOIN dim_campaigns c ON s.campaign_id = c.campaign_id
-        WHERE s.session_start >= CURRENT_DATE - INTERVAL '{{window_days}}' DAY
+        WHERE s.session_start_time >= CURRENT_DATE - INTERVAL '{{window_days}}' DAY
         GROUP BY c.channel
       )
       SELECT
