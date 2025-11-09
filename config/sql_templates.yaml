@@ -10,7 +10,7 @@
            SUM(f.spend) AS total_spend
     FROM fact_ad_spend f
     JOIN dim_campaigns c ON f.campaign_id = c.campaign_id
-    WHERE f.date >= CURRENT_DATE - INTERVAL {{time_window_days}} DAY
+    WHERE f.date >= CURRENT_DATE - INTERVAL '{{time_window_days}}' DAYS
     GROUP BY 1,2
     ORDER BY 2 ASC, 1
     LIMIT {{limit}};
@@ -30,7 +30,7 @@
                 ELSE SUM(f.clicks)::DOUBLE / SUM(f.impressions) END AS ctr
     FROM fact_ad_spend f
     JOIN dim_campaigns c ON f.campaign_id = c.campaign_id
-    WHERE f.date >= CURRENT_DATE - INTERVAL {{time_window_days}} DAY
+    WHERE f.date >= CURRENT_DATE - INTERVAL '{{time_window_days}}' DAYS
     GROUP BY 1
     ORDER BY ctr DESC NULLS LAST
     LIMIT {{limit}};
@@ -49,7 +49,7 @@
            SUM(o.margin)  AS margin
     FROM fact_orders o
     JOIN dim_products p ON o.sku = p.sku
-    WHERE o.order_timestamp >= CURRENT_TIMESTAMP - INTERVAL {{time_window_days}} DAY
+    WHERE o.order_timestamp >= (CURRENT_TIMESTAMP - INTERVAL '{{time_window_days}}' DAYS)::TIMESTAMP
     GROUP BY 1
     ORDER BY revenue DESC
     LIMIT {{limit}};
@@ -60,13 +60,13 @@
   utterances:
     - "roas by channel"
     - "which channel is most efficient"
-  role_hint: "ceo"
+  role_hint: ["marketer", "ceo"]  # Works for both tactical and strategic analysis
   sql: |
     WITH spend AS (
       SELECT c.channel, SUM(f.spend) AS spend
       FROM fact_ad_spend f
       JOIN dim_campaigns c ON f.campaign_id = c.campaign_id
-      WHERE f.date >= CURRENT_DATE - INTERVAL {{time_window_days}} DAY
+      WHERE f.date >= CURRENT_DATE - INTERVAL '{{time_window_days}}' DAYS
       GROUP BY 1
     ),
     rev AS (
@@ -74,7 +74,7 @@
       FROM fact_orders o
       JOIN fact_sessions s ON o.session_id = s.session_id
       JOIN dim_campaigns c ON s.campaign_id = c.campaign_id
-      WHERE o.order_timestamp >= CURRENT_TIMESTAMP - INTERVAL {{time_window_days}} DAY
+      WHERE o.order_timestamp >= (CURRENT_TIMESTAMP - INTERVAL '{{time_window_days}}' DAYS)::TIMESTAMP
       GROUP BY 1
     )
     SELECT COALESCE(spend.channel, rev.channel) AS channel,
@@ -100,7 +100,7 @@
            CASE WHEN COUNT(*)=0 THEN NULL
                 ELSE SUM(CASE WHEN s.converted_flag THEN 1 ELSE 0 END)::DOUBLE / COUNT(*) END AS cvr
     FROM fact_sessions s
-    WHERE s.date >= CURRENT_DATE - INTERVAL {{time_window_days}} DAY
+    WHERE s.date >= CURRENT_DATE - INTERVAL '{{time_window_days}}' DAYS
     GROUP BY 1
     ORDER BY cvr DESC NULLS LAST
     LIMIT {{limit}};
@@ -119,7 +119,7 @@
            COUNT(DISTINCT o.order_id) AS orders
     FROM fact_orders o
     JOIN dim_products p ON o.sku = p.sku
-    WHERE o.order_timestamp >= CURRENT_TIMESTAMP - INTERVAL {{time_window_days}} DAY
+    WHERE o.order_timestamp >= (CURRENT_TIMESTAMP - INTERVAL '{{time_window_days}}' DAYS)::TIMESTAMP
     GROUP BY 1
     ORDER BY margin DESC
     LIMIT {{limit}};
