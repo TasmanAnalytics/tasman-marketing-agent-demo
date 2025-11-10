@@ -113,6 +113,137 @@ flowchart TB
 | **LLM Usage** | Heavy (SQL generation) | Minimal (ambiguity resolution only) |
 | **Testing** | None | Comprehensive inline tests |
 
+## 🧠 Decision Flow: Where LLMs Are (and Aren't) Used
+
+```mermaid
+flowchart TD
+    Start([Business Question]) --> Triage{TriageAgent<br/>Decision Point}
+
+    Triage -->|1. Try Local Rules| Keywords[Keyword Matching<br/>analysis_keywords<br/>search_keywords]
+    Keywords -->|Score ≥ 2<br/>Confidence: 0.9| TriageResult[mode: analysis]
+    Keywords -->|Score < 2<br/>Uncertain| LLM1{{LLM Fallback<br/>DSPy Signature}}
+    LLM1 -->|Classified| TriageResult
+
+    TriageResult --> Semantic{TextToSemantic<br/>Decision Point}
+
+    Semantic -->|1. Try Templates| Template[Template Matching<br/>cac by channel<br/>roas by channel]
+    Template -->|Exact Match<br/>Confidence: 1.0| SemanticReq[Semantic Request:<br/>metric, dims, window]
+    Template -->|No Match| Pattern[Pattern Matching<br/>cac + improve/optimize]
+    Pattern -->|Matched| SemanticReq
+    Pattern -->|No Match| LLM2{{LLM Fallback<br/>Constrained DSPy}}
+    LLM2 -->|Validate| Validate{Metric & Dims<br/>in Catalog?}
+    Validate -->|✓ Valid| SemanticReq
+    Validate -->|✗ Invalid| Error1[Error: Unknown<br/>metric/dimension]
+
+    SemanticReq --> Compile[MetricRunner<br/>SQL Compilation]
+    Compile -->|Deterministic| LoadSemantic[Load semantic.yml<br/>Get query template]
+    LoadSemantic --> Substitute[Substitute params:<br/>window_days, limit]
+    Substitute --> CompiledSQL[Compiled SQL<br/>+ Query ID]
+
+    CompiledSQL --> Execute[Execute Query<br/>DuckDB Read-Only]
+    Execute --> Sanity{Sanity Checks}
+    Sanity -->|Row count OK| ResultDF[DataFrame]
+    Sanity -->|Cartesian explosion| Error2[Error: Too many rows]
+
+    ResultDF --> Hypothesis[HypothesisAgent<br/>Budget Simulation]
+    Hypothesis -->|Deterministic| CalcCAC[Calculate CAC<br/>by channel]
+    CalcCAC --> Identify[Identify best/worst<br/>channels]
+    Identify --> Simulate[Simulate 5pp shift]
+    Simulate --> Bootstrap[Bootstrap CI<br/>n=1000 samples]
+    Bootstrap --> HypResult[Projected CAC<br/>+ 95% CI]
+
+    HypResult --> Narrator{NarratorAgent<br/>Decision Point}
+    Narrator -->|If Offline Mode| Template2[Template Memo<br/>with placeholders]
+    Narrator -->|Else| LLM3{{LLM Generation<br/>Constrained DSPy}}
+    Template2 --> Validate2[Validate memo:<br/>≤150 words<br/>References metrics]
+    LLM3 --> Validate2
+    Validate2 --> Memo[Decision Memo]
+
+    Memo --> Observability[Record Everything<br/>Run ID, timings, SQL IDs]
+    Observability --> Tests[Inline Tests<br/>5 test suites]
+    Tests --> End([Complete])
+
+    %% Styling
+    style Keywords fill:#e7f5ff,stroke:#339af0
+    style Template fill:#e7f5ff,stroke:#339af0
+    style Pattern fill:#e7f5ff,stroke:#339af0
+    style LoadSemantic fill:#e7f5ff,stroke:#339af0
+    style Substitute fill:#e7f5ff,stroke:#339af0
+    style CalcCAC fill:#e7f5ff,stroke:#339af0
+    style Identify fill:#e7f5ff,stroke:#339af0
+    style Simulate fill:#e7f5ff,stroke:#339af0
+    style Bootstrap fill:#e7f5ff,stroke:#339af0
+    style Template2 fill:#e7f5ff,stroke:#339af0
+    style Observability fill:#e7f5ff,stroke:#339af0
+    style Tests fill:#e7f5ff,stroke:#339af0
+
+    style LLM1 fill:#fff3bf,stroke:#f59f00,stroke-width:3px
+    style LLM2 fill:#fff3bf,stroke:#f59f00,stroke-width:3px
+    style LLM3 fill:#fff3bf,stroke:#f59f00,stroke-width:3px
+
+    style Validate fill:#fff5f5,stroke:#ff6b6b
+    style Sanity fill:#fff5f5,stroke:#ff6b6b
+    style Validate2 fill:#fff5f5,stroke:#ff6b6b
+
+    style Error1 fill:#ffe3e3,stroke:#c92a2a
+    style Error2 fill:#ffe3e3,stroke:#c92a2a
+
+    style Start fill:#d3f9d8,stroke:#2f9e44
+    style End fill:#d3f9d8,stroke:#2f9e44
+```
+
+### 🎯 LLM Usage Strategy: Local-First
+
+The diagram shows **only 3 LLM decision points** (yellow) in the entire pipeline:
+
+#### 1. **TriageAgent** (Rarely Used)
+- **Primary**: Keyword matching (deterministic)
+- **Fallback**: LLM only if keyword score < 2
+- **Reality**: For typical questions, local rules have 0.9 confidence
+
+#### 2. **TextToSemanticAgent** (Sometimes Used)
+- **Primary**: Template matching (exact string match)
+- **Secondary**: Pattern matching (e.g., "cac" + "improve")
+- **Fallback**: LLM only if no template/pattern match
+- **Constraint**: LLM output validated against semantic catalog
+- **Reality**: Most questions hit template or pattern match
+
+#### 3. **NarratorAgent** (Optional)
+- **Primary**: LLM for natural language generation
+- **Constraint**: Output validated (≤150 words, references metrics)
+- **Alternative**: Offline mode uses template with placeholders
+- **Reality**: Only component where LLM adds value (not logic)
+
+### 🔷 Deterministic Components (Blue)
+
+These components use **zero LLMs**:
+
+- **MetricRunner**: SQL compilation from YAML templates
+- **HypothesisAgent**: Statistical calculations (numpy)
+- **Observability**: Logging and provenance tracking
+- **Inline Tests**: Validation checks
+
+### 🔶 Validation Gates (Red)
+
+Every potentially risky operation has validation:
+
+1. **Semantic validation**: Reject unknown metrics/dimensions
+2. **Sanity checks**: Detect cartesian explosions
+3. **Narration validation**: Check length and metric references
+
+### 📊 LLM Usage Comparison
+
+| Component | Bad Demo | Good Demo |
+|-----------|----------|-----------|
+| **SQL Generation** | 🟡 LLM (unvalidated) | 🔵 Deterministic (semantic.yml) |
+| **Triage** | 🟡 LLM | 🔵 Local rules (LLM fallback) |
+| **Semantic Mapping** | 🟡 LLM | 🔵 Templates (LLM fallback) |
+| **Query Execution** | 🟡 LLM decides | 🔵 Deterministic |
+| **Calculations** | 🟡 LLM (if any) | 🔵 Deterministic (numpy) |
+| **Narration** | 🟡 LLM (unconstrained) | 🟡 LLM (constrained + validated) |
+
+**Result**: Good demo uses LLMs in ~3% of decisions vs. 100% in bad demo.
+
 ## 🏗️ Architecture Principles (Good Demo)
 
 1. **Semantic Layer First** - All metrics defined in `config/semantic.yml`
