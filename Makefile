@@ -1,7 +1,7 @@
 # Tasman Agentic Analytics - Makefile
 # Simple commands for common tasks
 
-.PHONY: help install test clean run sample-data lint format check
+.PHONY: help install test clean run demo sample-data lint format check
 
 # Default target
 help:
@@ -14,6 +14,7 @@ help:
 	@echo "  make test-v       - Run tests with verbose output"
 	@echo "  make test-cov     - Run tests with coverage report"
 	@echo "  make run          - Launch Jupyter notebook"
+	@echo "  make demo         - Launch Compass demo notebooks (bad vs good)"
 	@echo "  make lint         - Check code style (if ruff installed)"
 	@echo "  make format       - Format code (if ruff installed)"
 	@echo "  make clean        - Remove cache and temporary files"
@@ -60,6 +61,19 @@ run:
 	@echo ""
 	uv run jupyter notebook notebooks/Agentic_Analytics_Demo.ipynb
 
+# Launch Compass demo notebooks
+demo:
+	@echo "🎯 Launching Compass Demo Notebooks..."
+	@echo ""
+	@echo "This demo showcases two approaches to LLM-powered analytics:"
+	@echo "  • 01_bad_oneshot_raw.ipynb     - Anti-pattern (what NOT to do)"
+	@echo "  • 02_good_modular_dspy.ipynb   - Production-grade (best practices)"
+	@echo ""
+	@echo "The notebooks will open in your browser at http://localhost:8888"
+	@echo "Navigate to the demo/ folder to view both notebooks."
+	@echo ""
+	cd demo && uv run jupyter notebook
+
 # Lint code (if ruff is available)
 lint:
 	@echo "🔍 Checking code style..."
@@ -85,11 +99,14 @@ clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".ipynb_checkpoints" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
 	find . -type f -name "*.pyo" -delete 2>/dev/null || true
 	rm -rf .cache/llm/*.json 2>/dev/null || true
 	rm -rf notebooks/.ipynb_checkpoints 2>/dev/null || true
 	rm -rf notebooks/outputs/*.png 2>/dev/null || true
+	rm -rf demo/outputs/*.png 2>/dev/null || true
+	rm -rf demo/outputs/*.json 2>/dev/null || true
 	@echo "✅ Cleanup complete!"
 
 # Run all checks
