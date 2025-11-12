@@ -21,11 +21,20 @@ This demo showcases the **correct** way to build LLM-powered analytics agents by
 
 Lightweight support modules (clean-room implementation):
 
+- **`agents.py`** - 🎯 All 5 agent implementations (TriageAgent, TextToSemanticAgent, MetricRunner, HypothesisAgent, NarratorAgent)
 - `env_loader.py` - Environment variable management
 - `db_connector.py` - DuckDB connection with schema validation
 - `semantic_parser.py` - Semantic layer YAML parser and SQL compiler
 - `plotting.py` - Matplotlib helpers for channel metrics
 - `observability.py` - Run record for reproducibility
+- `dspy_best_practices.md` - DSPy patterns and anti-patterns guide
+- `hypothesis_testing_playbook.py` - LLM hypothesis testing with playbook
+
+### Diagrams
+
+- **`database_erd.png`** - 📊 Visual ERD of the database schema (426KB, 300 DPI)
+- `database_erd.md` - Detailed ERD documentation with relationships
+- `generate_erd.py` - Python script to regenerate the ERD diagram
 
 ## 🎯 Business Question
 

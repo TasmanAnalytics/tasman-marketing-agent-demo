@@ -8,6 +8,13 @@ from .db_connector import get_db_connection, validate_schema
 from .semantic_parser import SemanticLayer
 from .plotting import plot_channel_metric
 from .observability import RunRecord
+from .agents import (
+    TriageAgent,
+    TextToSemanticAgent,
+    MetricRunner,
+    HypothesisAgent,
+    NarratorAgent,
+)
 
 __all__ = [
     'load_environment',
@@ -16,4 +23,9 @@ __all__ = [
     'SemanticLayer',
     'plot_channel_metric',
     'RunRecord',
+    'TriageAgent',
+    'TextToSemanticAgent',
+    'MetricRunner',
+    'HypothesisAgent',
+    'NarratorAgent',
 ]
