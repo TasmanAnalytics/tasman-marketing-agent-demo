@@ -5,7 +5,9 @@
 [![Tests](https://img.shields.io/badge/tests-141%20passed-brightgreen.svg)](./tests)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-A **local-first, notebook-driven** agentic analytics system that combines template-based search with sophisticated statistical analysis agents.
+**🔗 [View Compass Demo](demo/)**: Explore our architecture through a contrasting good vs. bad agent implementation.
+
+A **local-first, notebook-driven** agentic analytics platform that minimizes LLM usage through intelligent, rule-based agents. Provides template-driven search and statistical analysis with robust validation.
 
 > **Version 0.2.0** - Major update adding Analysis Mode with 3 specialized agents: Hypothesis Testing, Driver Analysis, and Segmentation.
 
